@@ -1,5 +1,5 @@
 #made by Ryan Joshua Liwag
-#Coded with human music
+
 from scipy.spatial import distance as dist
 from imutils import perspective
 from imutils import contours
