@@ -19,7 +19,6 @@ void setup()
 //################# Main Loop #################
 void loop() 
   {
-   Serial.print(ultrasonic.Ranging(CM));
    // Loop while there no data is being transmitted
    while(!Serial.available())
      {
@@ -37,13 +36,17 @@ void loop()
     }
   // sending back data readstring is no longer empty
   if (readString.length()>0)
-    {
-      Serial.print("Arduino Received: ");
-      Serial.println(readString);
-      
-      if (readString = "capture")
+    { 
+      if (readString = "height")
       {
+        //this sends ultrasonic distance and weight value 
+        Serial.println(ultrasonic.Ranging(CM));
+        
+      }
       
+      if (readString = "weight")
+      {
+        Serial.println("365");
       }
     }
     readString = ""; 

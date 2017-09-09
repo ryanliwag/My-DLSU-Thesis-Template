@@ -7,39 +7,78 @@ import imutils
 import cv2
 from math import sqrt
 
-
-#to do list
-#transfer of data from rpi to laptop
-#weight sensor
-#images measure size. this is where 2 cameras are needed. some correlation of these will be labeled
-#large or small then fit it into a linear regression model.
-#as for the 
-
-# data transfer between python and rpi3
-# multi-threading of images in rpi3
-
-
-########################## ARDUINO COMMS #############################
 import serial 
 import time
 import sys
 import struct
 
+'''
+To do list
+
+1. Create A funciton that will receive all arduino data
+2. Create A function that will transmit and receive all image and results through tcp_ip
+3. Create A function that will transmit all necessary commands to Arduino
+'''
+
+#Arduino Communication Class
 class arduino():
 
 	def __init__(self, usb_port, baud_rate):
 		self.usb_port = usb_port
 		self.baud_rate = baud_rate
 
-		self.ser = serial.Serial(usb_port, baud_rate, timeout=0)
+		self.ser = serial.Serial(usb_port, baud_rate, timeout=5)
 
-	def send_data(data):
+	def send_data(self, data):
 		self.ser.write(str(data).encode())
+		time.sleep(0.5)
 
-	def read_data():
-		data = self.ser.read(ser.inWaiting())
-		data = data.decode("utf-8")
-		return data
+	def read_data(self):
+		self.data = self.ser.read(self.ser.inWaiting())
+		self.data = self.data.decode("utf-8")
+		return self.data
+
+'''
+class tcp_ip():
+
+	def __init__(self, TCP_IP, TCP_PORT):
+		self.TCP_IP = TCP_IP
+		self.TCP_PORT = TCP_PORT
+
+		self.sock = socket.socket()
+		self.sock.connect((self.TCP_IP, self.TCP_PORT))
+
+	def send_image(self, frame):
+		encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+		result, imgencode = cv2.imencode('.jpg', frame, encode_param)
+		data = np.array(imgencode)
+		stringData = data.tostring()
+		self.sock.send( str(len(stringData)).ljust(16))
+		self.sock.send(stringData)
+
+	def receive_result(self):
+		data = self.sock.recv(1024).decode()
+		return data 
+'''
+'''
+def send_image(frame):
+	TCP_IP = "192.168.1.107"
+	TCP_PORT = 5000
+
+	sock = socket.socket()
+	sock.connect((TCP_IP, TCP_PORT))
+
+	encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+	result, imgencode = cv2.imencode('.jpg', frame, encode_param)
+	data = np.array(imgencode)
+	stringData = data.tostring()
+
+	sock.send( str(len(stringData)).ljust(16))
+	sock.send(stringData)
+	data = sock.recv(1024).decode()
+	print(data)
+
+'''
 
 
 def midpoint(ptA, ptB):
@@ -151,14 +190,21 @@ def main():
 
 	
 		if cv2.waitKey(1) & 0xFF == ord('c'):
-			cv2.imwrite("captured.png", frame)
-			send_image(frame)
-		#this will be a ardiuno input
+			#capture
+			arduino_comms = arduino("/dev/ttyUSB0", 9600)
+			arduino_comms.send_data("height")
+			data = arduino_comms.read_data()
+			print(data)
+			arduino_comms.send_data("weight")
+			data = arduino_comms.read_data()
+			print(data)
 
 
 
 		cv2.imshow('video', frame)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
+		if cv2.waitKey(1) & 0xFF == o			arduino_comms.send_data("height")
+			data = arduino_comms.read_data()
+			print(data)rd('q'):
 			break
 
 	cap.release()
