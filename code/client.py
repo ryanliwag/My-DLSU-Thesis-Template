@@ -1,13 +1,11 @@
 #made by Ryan Joshua Liwag
 
-from scipy.spatial import distance as dist
-from imutils import perspective
 from imutils import contours
 import numpy as np
 import argparse
 import imutils
 import cv2
-
+from math import sqrt
 
 
 #to do list
@@ -44,28 +42,6 @@ class arduino():
 		return data
 
 
-
-print("gg")
-while True:
-
-	ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=0)
-
-
-	one = 2
-
-	#send data
-	ser.write(str(one).encode())
-	time.sleep(1)
-	#receive data from arduino
-	data=ser.read(ser.inWaiting())
-	print(data.decode("utf-8"))
-
-
-
-	
-
-
-
 def midpoint(ptA, ptB):
 	return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
 
@@ -98,7 +74,7 @@ def get_length_width(image_frame, calibrated_pxm):
 
 	#extract 4 corners
 	(tl, tr, br, bl) = box
-
+	
 	(tltrX, tltrY) = midpoint(tl, tr)
 	(blbrX, blbrY) = midpoint(bl, br)
 	print(tl)
@@ -108,8 +84,8 @@ def get_length_width(image_frame, calibrated_pxm):
 	(midx, midy) = midpoint((tltrX, tltrY), (blbrX, blbrY))
 
 	#compute distance x and y
-	dA = dist.euclidean(tl, tr)
-	dB = dist.euclidean(tr, br)
+	dA = sqrt( (tr[0] - tl[0])**2 + (tr[1] - tl[1])**2 )
+	dB = sqrt( (tr[0] - br[0])**2 + (tr[1] - br[1])**2 )
 	area = dA * dB
 	dimA = dA / calibrated_pxm
 	dimB = dB / calibrated_pxm
@@ -131,15 +107,7 @@ def feed_to_arduino():
 def get_height():
 	print("get height info")
 
-import serial 
-import time
-import sys
-import struct
 
-def test_arduino_comms():
-	ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=0)
-	ser.write(bytes())
-	print(ser.readline())
 
 def send_image(frame):
 	TCP_IP = "192.168.1.107"
@@ -162,28 +130,25 @@ def send_image(frame):
 # Main function
 def main():
 	#1 is for webcam another video capture will be here.
-	cap = cv2.VideoCapture(1)
+	cap = cv2.VideoCapture(0)
 	while(True):
 
 		ret, frame = cap.read()
-		try:
-			dimA, dimB, tl, dA, dB, midx, midy, cn = get_length_width(frame, 90)
-			cv2.circle(frame, (int(midx), int(midy)), 5, (0, 0, 255), -1)
+		
+		dimA, dimB, tl, dA, dB, midx, midy, cn = get_length_width(frame, 90)
+		cv2.circle(frame, (int(midx), int(midy)), 5, (0, 0, 255), -1)
 			#cv2.putText(frame, "{:.1}in".format(dimA), )
-			font = cv2.FONT_HERSHEY_SIMPLEX
-			cv2.putText(frame,"heigth: {:.01}in".format(float(dimA)),(10,50), font, 0.7,(255,255,255),2,cv2.LINE_AA)
-			cv2.putText(frame,"length: {:.01}in".format(dimB),(10,67), font, 0.7,(255,255,255),2,cv2.LINE_AA)
-			
-			cv2.drawContours(frame, cn, -1, (0, 255, 0), 2)
-			print(midx, midy)
+		font = cv2.FONT_HERSHEY_SIMPLEX
+		cv2.putText(frame,"heigth: {:.01}in".format(float(dimA)),(10,50), font, 0.7,(255,255,255),2,cv2.LINE_AA)
+		cv2.putText(frame,"length: {:.01}in".format(dimB),(10,67), font, 0.7,(255,255,255),2,cv2.LINE_AA)
+		
+		cv2.drawContours(frame, cn, -1, (0, 255, 0), 2)
+		print(midx, midy)
 			#this might be useless unless mango is placed on the same spot
-			cropped_img = frame[ tl[1]:tl[1]+int(dA), tl[0]:tl[0]+int(dB)]
-			cv2.imshow('heyy', cropped_img)
-		except:
-			print("not contours found")
-			pass
+		cropped_img = frame[ tl[1]:tl[1]+int(dA), tl[0]:tl[0]+int(dB)]
+		cv2.imshow('heyy', cropped_img)
 
-		test_arduino_comms()
+
 	
 		if cv2.waitKey(1) & 0xFF == ord('c'):
 			cv2.imwrite("captured.png", frame)
@@ -199,17 +164,6 @@ def main():
 	cap.release()
 	cv2.destroyAllWindows()
 
-'''
-down vote
-	
-
-i had this question and found another answer here: copy region of interest
-
-If we consider (0,0) as top left corner of image called im with left-to-right as x direction and top-to-bottom as y direction. and we have (x1,y1) as the top-left vertex and (x2,y2) as the bottom-right vertex of a rectangle region within that image, then:
-
-roi = im[y1:y2, x1:x2]
-
-'''
 
 
 
