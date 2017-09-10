@@ -134,20 +134,6 @@ def get_length_width(image_frame, calibrated_pxm):
 	return dimA, dimB, tr, dA, dB, midx, midy, c
 
 
-# This function will calibrate the camera with the ultrasonic sensor
-def calibrate():
-	#calibrate with ultrasonic 
-	print("calibration potangina mo, please die")
-
-
-def feed_to_arduino():
-	print("feed back data to arduino")
-
-def get_height():
-	print("get height info")
-
-
-
 def send_image(frame):
 	TCP_IP = "192.168.1.107"
 	TCP_PORT = 5000
@@ -166,10 +152,20 @@ def send_image(frame):
 	print(data)
 
 
+#Function to get height and weight of mango from arduino
+def get_arduino_data():
+	arduino_comms = arduino("/dev/ttyUSB0", 9600)
+	arduino_comms.send_data("height")
+	height = arduino_comms.read_data()
+	arduino_comms.send_data("weight")
+	weight = arduino_comms.read_data()
+	return height, weight
+
+
 # Main function
 def main():
 	#1 is for webcam another video capture will be here.
-	cap = cv2.VideoCapture(0)
+	cap = cv2.VideoCapture(1)
 	while(True):
 
 		ret, frame = cap.read()
@@ -189,22 +185,11 @@ def main():
 
 
 	
-		if cv2.waitKey(1) & 0xFF == ord('c'):
-			#capture
-			arduino_comms = arduino("/dev/ttyUSB0", 9600)
-			arduino_comms.send_data("height")
-			data = arduino_comms.read_data()
-			print(data)
-			arduino_comms.send_data("weight")
-			data = arduino_comms.read_data()
-			print(data)
 
 
 
 		cv2.imshow('video', frame)
-		if cv2.waitKey(1) & 0xFF == o			arduino_comms.send_data("height")
-			data = arduino_comms.read_data()
-			print(data)rd('q'):
+		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 
 	cap.release()
