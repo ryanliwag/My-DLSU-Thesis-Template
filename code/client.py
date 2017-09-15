@@ -104,7 +104,8 @@ def get_length_width(image_frame, calibrated_pxm):
 	#this needs to be calibrated to the distance of camera to the object
 	c = max(cnts, key = cv2.contourArea)
 	# if the contour is not sufficiently large, ignore it
-
+	M = cv2.moments(c)
+	print(M)
 
 	box = cv2.minAreaRect(c)
 	box = cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
@@ -165,7 +166,9 @@ def get_arduino_data():
 # Main function
 def main():
 	#1 is for webcam another video capture will be here.
-	cap = cv2.VideoCapture(1)
+	cap = cv2.VideoCapture(0)
+	cap.set(3,1280)
+	cap.set(4,720)
 	while(True):
 
 		ret, frame = cap.read()

@@ -16,7 +16,7 @@ class tcp_ip():
 		result, imgencode = cv2.imencode('.jpg', frame, encode_param)
 		data = np.array(imgencode)
 		stringData = data.tostring()
-		self.sock.send( str(len(stringData)).ljust(16))
+		self.sock.send((str(len(stringData)).ljust(16)).encode())
 		self.sock.send(stringData)
 
 	def receive_result(self):
@@ -45,7 +45,8 @@ def send_image(frame):
 
 
 def main():
-	cap = cv2.VideoCapture(1)
+	cap = cv2.VideoCapture(0)
+
 
 	while(True):
 		ret, frame = cap.read()
