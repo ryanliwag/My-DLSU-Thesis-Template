@@ -38,14 +38,13 @@ class arduino():
 		self.data = self.data.decode("utf-8")
 		return self.data
 
-'''
 class tcp_ip():
 
 	def __init__(self, TCP_IP, TCP_PORT):
 		self.TCP_IP = TCP_IP
 		self.TCP_PORT = TCP_PORT
 
-		self.sock = socket.socket()
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.connect((self.TCP_IP, self.TCP_PORT))
 
 	def send_image(self, frame):
@@ -53,16 +52,16 @@ class tcp_ip():
 		result, imgencode = cv2.imencode('.jpg', frame, encode_param)
 		data = np.array(imgencode)
 		stringData = data.tostring()
-		self.sock.send( str(len(stringData)).ljust(16))
+		self.sock.send((str(len(stringData)).ljust(16)).encode())
 		self.sock.send(stringData)
 
 	def receive_result(self):
 		data = self.sock.recv(1024).decode()
 		return data 
-'''
-'''
+
+
 def send_image(frame):
-	TCP_IP = "192.168.1.107"
+	TCP_IP = "192.168.1.108"
 	TCP_PORT = 5000
 
 	sock = socket.socket()
@@ -73,12 +72,11 @@ def send_image(frame):
 	data = np.array(imgencode)
 	stringData = data.tostring()
 
-	sock.send( str(len(stringData)).ljust(16))
+	sock.send( (str(len(stringData)).ljust(16)).encode())
 	sock.send(stringData)
 	data = sock.recv(1024).decode()
 	print(data)
 
-'''
 
 
 def midpoint(ptA, ptB):
@@ -135,24 +133,6 @@ def get_length_width(image_frame, calibrated_pxm):
 	return dimA, dimB, tr, dA, dB, midx, midy, c
 
 
-def send_image(frame):
-	TCP_IP = "192.168.1.107"
-	TCP_PORT = 5000
-
-	sock = socket.socket()
-	sock.connect((TCP_IP, TCP_PORT))
-
-	encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
-	result, imgencode = cv2.imencode('.jpg', frame, encode_param)
-	data = np.array(imgencode)
-	stringData = data.tostring()
-
-	sock.send( str(len(stringData)).ljust(16))
-	sock.send(stringData)
-	data = sock.recv(1024).decode()
-	print(data)
-
-
 #Function to get height and weight of mango from arduino
 def get_arduino_data():
 	arduino_comms = arduino("/dev/ttyUSB0", 9600)
@@ -178,7 +158,7 @@ def main():
 			#cv2.putText(frame, "{:.1}in".format(dimA), )
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		cv2.putText(frame,"heigth: {:.01}in".format(float(dimA)),(10,50), font, 0.7,(255,255,255),2,cv2.LINE_AA)
-		cv2.putText(frame,"length: {:.01}in".format(dimB),(10,67), font, 0.7,(255,255,255),2,cv2.LINE_AA)
+		cv2.putText(frame,"length: {:.01}in".format(dimB),(10,68), font, 0.7,(255,255,255),2,cv2.LINE_AA)
 		
 		cv2.drawContours(frame, cn, -1, (0, 255, 0), 2)
 		print(midx, midy)
