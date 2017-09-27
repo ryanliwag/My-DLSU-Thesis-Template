@@ -7,6 +7,17 @@ from math import sqrt
 
 from thesis_classes import *
 
+def capture(frame):
+	try:
+		X, Y, Z, box, midx, midy = get_size(frame, 90)
+		#locates center of object
+		cv2.circle(frame, (int(midx), int(midy)), 5, (0, 0, 255), -1)
+		print(X, Y, Z)
+		cv2.drawContours(frame,[box],0,(0,0,255),1)
+		cv2.imshow("processed image", frame)
+	except IndexError:
+		print("wtf")
+		pass
 
 
 def midpoint(ptA, ptB):
@@ -39,7 +50,7 @@ def get_size(image_frame, calibrated_pxm):
 
 		area = cv2.contourArea(c)
 		#adjust this if possible
-		if area > 6000:
+		if area > 100:
 			areaArray.append(area)
 		else:
 			continue
@@ -77,7 +88,7 @@ def get_size(image_frame, calibrated_pxm):
 	X = dA / calibrated_pxm
 	Y = dB / calibrated_pxm
 	Z = get_arduino_data("/dev/ttyUSB0")
-
+	print(Z)
 	return X, Y, Z, box_points, midx, midy
 
 
@@ -92,3 +103,5 @@ def save_image(frame):
 	time = datetime.datetime.now().time()
 	cv2.imwrite(str(time) + ".jpeg", frame)
 	print("Image saved" + str(time) + ".jpeg")
+
+

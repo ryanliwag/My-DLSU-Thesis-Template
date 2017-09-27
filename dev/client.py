@@ -31,17 +31,14 @@ def main():
 
 		ret, frame = cap.read()
 		
-		try:
-			X, Y, Z, box, midx, midy = vision.get_size(frame, 90)
-			#locates center of object
-			cv2.circle(frame, (int(midx), int(midy)), 5, (0, 0, 255), -1)
-			cv2.drawContours(frame,[box],0,(0,0,255),1)
 
-		except IndexError:
-			pass
 
 
 		cv2.imshow('video', frame)
+
+		#capture replace later with kivy button
+		vision.capture(frame)
+
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 

@@ -17,9 +17,13 @@ class arduino():
 		time.sleep(0.5)
 
 	def read_data(self):
-		self.data = self.ser.read(self.ser.inWaiting())
-		self.data = self.data.decode("utf-8")
+		self.data = self.ser.readline().strip()
+		#self.data = self.data.decode("utf-8")
 		return self.data
+
+	def close(self):
+		self.ser.close()
+
 
 #TCP_IP COMMUNICATION CLASS
 # improvments pickle the image data
@@ -43,3 +47,10 @@ class tcp_ip():
 	def receive_result(self):
 		data = self.sock.recv(1024).decode()
 		return data 
+
+
+def get_arduino_data(port):
+	arduino_comms = arduino(port, 9600)
+	height = arduino_comms.read_data()
+	return height
+
