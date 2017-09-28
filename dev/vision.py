@@ -14,9 +14,16 @@ def capture(frame):
 		cv2.circle(frame, (int(midx), int(midy)), 5, (0, 0, 255), -1)
 		print(X, Y, Z)
 		cv2.drawContours(frame,[box],0,(0,0,255),1)
+		font = cv2.FONT_HERSHEY_SIMPLEX
+		cv2.putText(frame,"Parameters",(10,31), font, 0.5,(0,100,0),2,cv2.LINE_AA)
+		cv2.putText(frame,"Width:  {:.03}in".format(float(X)),(10,50), font, 0.5,(0,100,0),2,cv2.LINE_AA)
+		cv2.putText(frame,"Length: {:.03}in".format(float(Y)),(10,69), font, 0.5,(0,100,0),2,cv2.LINE_AA)
+		cv2.putText(frame,"Height: {:.03}in".format(float(Z)),(10,88), font, 0.5,(0,100,0),2,cv2.LINE_AA)
+
 		cv2.imshow("processed image", frame)
+
 	except IndexError:
-		print("wtf")
+		print("no contours to capture")
 		pass
 
 
@@ -50,11 +57,7 @@ def get_size(image_frame, calibrated_pxm):
 
 		area = cv2.contourArea(c)
 		#adjust this if possible
-		if area > 100:
-			areaArray.append(area)
-		else:
-			continue
-
+		areaArray.append(area)
 
 	sorteddata = sorted(zip(areaArray,cnts), key=lambda x: x[0], reverse=True)
 
@@ -88,7 +91,7 @@ def get_size(image_frame, calibrated_pxm):
 	X = dA / calibrated_pxm
 	Y = dB / calibrated_pxm
 	Z = get_arduino_data("/dev/ttyUSB0")
-	print(Z)
+
 	return X, Y, Z, box_points, midx, midy
 
 
