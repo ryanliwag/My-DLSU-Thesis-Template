@@ -1,3 +1,6 @@
+# This code contains all image processing required to acquire height, thickness and length of acquired mango
+# Status: Incomplete
+
 
 import numpy as np
 import argparse
@@ -5,7 +8,7 @@ import imutils
 import cv2
 from math import sqrt
 
-from thesis_classes import *
+from communication import *
 
 def capture(frame):
 	try:

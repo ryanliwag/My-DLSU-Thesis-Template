@@ -1,3 +1,6 @@
+# This code contains the classes necessary for serial and tcp/ip communication
+# Status: Incomplete
+
 import serial 
 import time
 import sys
