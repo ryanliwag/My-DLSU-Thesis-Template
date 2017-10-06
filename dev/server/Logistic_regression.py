@@ -55,6 +55,7 @@ optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 
 # Initialize the variables (i.e. assign their default value)
 
+saver = tf.train.Saver()
 
 # Start training
 with tf.Session() as sess:
@@ -76,3 +77,5 @@ with tf.Session() as sess:
     correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+    save_path = saver.save(sess, "test/model.ckpt")
