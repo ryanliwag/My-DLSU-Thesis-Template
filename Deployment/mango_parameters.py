@@ -87,12 +87,5 @@ def get_size(image_frame, calibrated_pxm):
 	X = dA / calibrated_pxm
 	Y = dB / calibrated_pxm
 	Z = get_arduino_data("/dev/ttyUSB0")
-
-
-
 	return X, Y, Z
 
-'''
-img = cv2.imread("test_images/20171018-032922-433214.jpg")
-print(get_size(img, 90))
-'''
