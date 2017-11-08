@@ -18,7 +18,7 @@ logs_path = 'logs'
 
 def load_data(location):
     data = pd.read_csv(location)
-    x_data = data[["Width", "Length", "Thickness"]].values
+    x_data = data[["Width", "Length"]].values
     y_data = data[["Weight"]].values
     return x_data, y_data
 

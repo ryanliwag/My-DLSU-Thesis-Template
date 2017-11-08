@@ -21,23 +21,19 @@ def load_graph(frozen_graph_filename):
 
 def normalize_size(x):
     #Values obtained from train.py output
-    mean = np.asarray([[76.06636364, 119.57220779, 65.79025974]])
-    std = np.asarray([[5.95719927, 8.19216614, 4.79434731]])
+    mean = np.asarray([[76.06636364, 119.57220779]])
+    std = np.asarray([[5.95719927, 8.19216614]])
     x_normalized = (x - mean) / std
     return x_normalized
 
 def convert_sizes(size):
 	size = int(size)
-	if size >= 350:
-		return "Extra Large"
-	elif size <= 349 and size >= 300:
+	if size >= 400:
 		return "Large"
-	elif size <= 299 and size >= 250:
+	elif size <= 399 and size >= 200:
 		return "medium"
-	elif size <= 249 and size >= 200:
-		return "small"
 	elif size < 199:
-		return "super small"
+		return "small"
 
 
 def predict_size(x_input):

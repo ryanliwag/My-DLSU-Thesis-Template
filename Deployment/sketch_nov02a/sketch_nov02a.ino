@@ -3,7 +3,7 @@ int enable = 12;
 int inputA = 11;
 int inputB = 10;
 int pwm = 9;
-
+int flag = 0;
 
 
 // the setup routine runs once when you press reset:
@@ -13,17 +13,30 @@ void setup() {
   pinMode(enable, OUTPUT);  
   pinMode(inputA, OUTPUT);  
   pinMode(inputB, OUTPUT);  
-  pinMode(pwm, OUTPUT);  
+  pinMode(pwm, OUTPUT); 
+  Serial.begin(9600); 
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
-  
-  delay(1000);  
+  if(Serial.available() > 0)
+  {
+    if(Serial.read() == '1' )
+    {
+      flag = 1;
+    }
+  }  
+
+  if (flag == 1){
   digitalWrite(enable, HIGH);   
-  digitalWrite(inputA, HIGH); 
-  digitalWrite(inputB, LOW);
+  digitalWrite(inputA, LOW); 
+  digitalWrite(inputB, HIGH);
   analogWrite(pwm, 255);    
-  delay(5000);
+  delay(60);
   digitalWrite(enable, LOW);
+  flag = 0;
+  }
+  
 }
+
+

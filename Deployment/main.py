@@ -13,13 +13,21 @@ import tensorflow as tf
 import cv2
 import numpy as np
 import collections
+import time
+from mango_parameters import *
 
-from size_classifier import load_graph
+
+import threading
+
+configd = tf.ConfigProto()
+configd.gpu_options.allow_growth=True
+
+
 
 class Import_Frcnn():
 	def __init__(self, location):
 		self.graph_frcnn = tf.Graph()
-		self.sess = tf.Session(graph=self.graph_frcnn)
+		self.sess = tf.Session(graph=self.graph_frcnn, config=configd)
 		with self.graph_frcnn.as_default():
 			self.od_graph_def = tf.GraphDef()	
 			with tf.gfile.GFile(location, 'rb') as fid:
@@ -44,7 +52,7 @@ class Import_MTL():
 	def __init__(self, location):
 
 		self.graph_mtl = load_graph(location)
-		self.sess = tf.Session(graph = self.graph_mtl)
+		self.sess = tf.Session(graph = self.graph_mtl, config=configd)
 		'''
 		for op in self.graph_mtl.get_operations():
 			print(str(op.name)) 
@@ -66,45 +74,139 @@ class Import_MTL():
 		return image_rgb
 
 
-def get_box(boxes, image):
+def get_box(boxes, scores, image):
 	boxes = np.squeeze(boxes)
-	box_to_color_map = collections.defaultdict(str)
-	boxes_ = tuple(boxes[0].tolist())
-	box_to_color_map[boxes_] = 'black'
+	boxes_array = []
+	scores_array = []
+	height, width = image.shape[:2]
+	for i in range(3):
+		if scores.item(i) > 0.8:
+			ymin, xmin, ymax, xmax = boxes[i]
+			boxes_array.append([xmin * width, xmax * width, ymin * height, ymax * height])
+			scores_array.append(scores.item(i))
+		else: 
+			pass
 
-	for box, color in box_to_color_map.items():
-	    ymin, xmin, ymax, xmax = box
-	    height, width = image.shape[:2]
+	return boxes_array, scores_array
 
-	return xmin * width, xmax * width, ymin * height, ymax * height
 
- 
-def main():
-	category_index = {1: {'id': 1, 'name': 'Green'}}
+
+
+
+class MyThread(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
+		self.stop = threading.Event()
+
+		#predict up to 3 items only
+		self.model_mtl = Import_MTL("frozen_models/MTL_frozen_model.pb")
+		self.model_fcnn = Import_Frcnn('frozen_models/frozen_inference_graph.pb')
+
+	def run(self, frame):
+		# Load the VGG16 network
+		return self.predict(frame)
+
+	def predict(self, frame):
+		ripe_score = []
+		quality_score = []
+		(boxes, scores, classes, num) = self.model_fcnn.run(frame)
+		box_array, scores_ = get_box(boxes, scores, frame)
+
+		if box_array:
+			for g in range(len(scores)):
+				left, right, top, bottom  = box_array[g]
+				crop = frame[int(top):int(bottom), int(left):int(right)]
+				quality, ripeness = self.model_mtl.run(crop)
+				ripe_score.append(ripeness)
+				quality_score.append(quality)
+
+		return box_array, scores_, ripe_score, quality_score
+
+		
+
+	def terminate(self):
+		self.stop.set()
+
+
+
+def draw_boxes_scores(box_array, score_array, ripe_array, quality_array, frame):
 	ripeness_dict = {0: 'Green', 1: 'Semi-Ripe', 2: 'Ripe'}
 	quality_dict = {0: 'Good', 1: 'Defect'}
+	for i in range(len(box_array)):
+		try:
+			cv2.rectangle(frame, (int(box_array[i][0]), int(box_array[i][2])), (int(box_array[i][1]), int(box_array[i][3])),(0,255,0),3)
+			cv2.putText(frame, "Detection:{0:.2f}".format(score_array[i]), (int(box_array[i][0]),int(box_array[i][2]-6)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+			cv2.putText(frame, "Quality:{}".format(quality_dict[int(np.argmax(quality_array[i], axis=1))]), (int(box_array[i][0]),int(box_array[i][2]-17)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+			cv2.putText(frame, "Ripeness:{}".format(ripeness_dict[int(np.argmax(ripe_array[i], axis=1))]), (int(box_array[i][0]),int(box_array[i][2]-28)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+		except:
+			pass
 
-	image_bgr = cv2.imread("/home/elements/Desktop/v-env/tensorflow/Dataset/ripeness/ripe/20171018-033104-604590.jpg")
-	image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
 
-	#import models
-	model_fcnn = Import_Frcnn('/home/elements/Desktop/v-env/tensorflow/My-Tensorflow-Basics/object-detection/notebook/frozen_inference_graph.pb')
-	model_mtl = Import_MTL("frozen_models/MTL_frozen_model.pb")
+def load_graph(frozen_graph_filename):
+    # We load the protobuf file from the disk and parse it to retrieve the 
+    # unserialized graph_def
+    with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    # Then, we import the graph_def into a new Graph and returns it 
+    with tf.Graph().as_default() as graph:
+        # The name var will prefix every op/nodes in your graph
+        # Since we load everything in a new graph, this is not needed
+        tf.import_graph_def(graph_def, name="prefix")
+    return graph
+
+def normalize_size(x):
+    #Values obtained from train.py output
+    mean = np.asarray([[76.06636364, 119.57220779]])
+    std = np.asarray([[5.95719927, 8.19216614]])
+    x_normalized = (x - mean) / std
+    return x_normalized
+
+def convert_sizes(size):
+	size = int(size)
+	if size >= 400:
+		return "Large"
+	elif size <= 399 and size >= 200:
+		return "medium"
+	elif size < 199:
+		return "small"
 
 
-	(boxes, scores, classes, num) = model_fcnn.run(image)
-	print("{0:.2f}%".format(scores.item(0) * 100))
-	left, right, top, bottom = get_box(boxes, image)
-	crop = image[int(top):int(bottom), int(left):int(right)]
 
-	quality, ripeness = model_mtl.run(crop)
-	print(quality_dict[np.argmax(quality, axis=1)[0]])
-	print(ripeness_dict[np.argmax(ripeness, axis=1)[0]])
 
-	cv2.imshow("cropped", crop)
-	cv2.imshow("image", image_bgr)
-	cv2.waitKey()
+def main():
 
+	cap = cv2.VideoCapture(0)
+	cap.set(3,1080)
+	cap.set(4,720)
+	if (cap.isOpened()):
+		print("Camera OK")
+	else:
+		cap.open()
+
+	yo_thread = MyThread()
+
+	while(True):
+
+		ret, frame = cap.read()
+		frame_ = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+		box, score, ripe, quality = yo_thread.run(frame_)
+
+
+
+		draw_boxes_scores(box, score, ripe, quality, frame)
+
+		cv2.imshow("Classification", frame)
+		cv2.namedWindow('Classification',cv2.WINDOW_NORMAL)
+		if (cv2.waitKey(1) & 0xFF == ord('q')):
+			break;
+
+	cap.release()
+	frame = None
+	cv2.destroyAllWindows()
+	yo_thread.terminate()
+	sys.exit()
 
 
 

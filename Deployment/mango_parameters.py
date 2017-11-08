@@ -56,27 +56,23 @@ def get_size(image_frame, calibrated_pxm):
 	#cv2.imwrite("gray_1.png", image_frame)
 	#cv2.imwrite("canny.png", canny)
 	#Find contours
-	(_,cnts,_) = cv2.findContours(edged, 
-								 cv2.RETR_EXTERNAL, 
-								 cv2.CHAIN_APPROX_SIMPLE)
+	(_,cnts,_) = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 	#append contour into tha area array
 	areaArray = []
 	for i, c in enumerate(cnts):
 		area = cv2.contourArea(c)
-		#adjust this if possible
 		areaArray.append(area)
+
 
 	sorteddata = sorted(zip(areaArray,cnts), key=lambda x: x[0], reverse=True)
 
 	#largest Contour
 	c = sorteddata[0][1] 
-	hey = cv2.drawContours(image_frame, c, -1, (255, 255, 0), 1)
+	print("AREA:",c)
 	x,y,w,h = cv2.boundingRect(c)
 	
-	#cv2.imwrite("box1.png", hey)
-	yo=cv2.rectangle(image_frame,(x,y),(x+w,y+h),(0,255,0),2)
-	#cv2.imwrite("box.png", yo)
+
 
 
 	#compute distance x and y
@@ -86,6 +82,16 @@ def get_size(image_frame, calibrated_pxm):
 	# X,Y,Z parameters
 	X = dA / calibrated_pxm
 	Y = dB / calibrated_pxm
-	Z = get_arduino_data("/dev/ttyUSB0")
-	return X, Y, Z
+
+	X = X * 25.4
+	Y = Y * 25.4
+
+	if X > Y:
+		Y_ = X
+		X_ = Y
+	else:
+		Y_ = Y
+		X_ = X
+
+	return X_, Y_
 
