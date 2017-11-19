@@ -1,8 +1,8 @@
 int led = 13;
-int enable = 12;
-int inputA = 11;
+int enable = 8;
+int inputA = 9;
 int inputB = 10;
-int pwm = 9;
+int pwm = 11;
 int flag = 0;
 
 
@@ -31,9 +31,11 @@ void loop() {
   digitalWrite(enable, HIGH);   
   digitalWrite(inputA, LOW); 
   digitalWrite(inputB, HIGH);
+  digitalWrite(led, HIGH);
   analogWrite(pwm, 255);    
   delay(60);
   digitalWrite(enable, LOW);
+  digitalWrite(led, LOW);
   flag = 0;
   }
   

@@ -40,7 +40,7 @@ def predict_size(x_input):
     # input: [width, length, thickness]
     # output: [size, size_classification]
     x_input = normalize_size(x_input)
-    graph = load_graph(frozen_path)
+    graph = load_graph("frozen_models/LR_frozen_model.pb")
 
     #identify variables and operations
     '''

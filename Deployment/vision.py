@@ -35,7 +35,7 @@ while (True):
 	cv2.imshow("ckass", original)
 
 
-	if (cv2.waitKey(1) & 0xFF == ord('q')):
+	if (cv2.waitKey(1) & 0xFF == ord('q')):xxxxxxxxxxxxxxxxxxxxxxxx
 		break;
 
 cap.release()
