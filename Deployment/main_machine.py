@@ -21,14 +21,11 @@ from size_classifier import load_graph
 
 import threading
 
-configd = tf.ConfigProto()
-configd.gpu_options.allow_growth=True
-
 
 class Import_Frcnn():
 	def __init__(self, location):
 		self.graph_frcnn = tf.Graph()
-		self.sess = tf.Session(graph=self.graph_frcnn, config=configd)
+		self.sess = tf.Session(graph=self.graph_frcnn)
 		with self.graph_frcnn.as_default():
 			self.od_graph_def = tf.GraphDef()	
 			with tf.gfile.GFile(location, 'rb') as fid:
@@ -53,7 +50,7 @@ class Import_MTL():
 	def __init__(self, location):
 
 		self.graph_mtl = load_graph(location)
-		self.sess = tf.Session(graph = self.graph_mtl, config=configd)
+		self.sess = tf.Session(graph = self.graph_mtl)
 		'''
 		for op in self.graph_mtl.get_operations():
 			print(str(op.name)) 
@@ -150,7 +147,7 @@ class PhotoBoothApp:
 		self.yo_thread = MyThread()
 
 
-		w = tki.Label(self.root, text="Hello, world!")
+		w = tki.Label(self.root, text="Mango AI")
 		w.pack()
 
 		# create a button, that when pressed, will take the current
@@ -247,7 +244,7 @@ import time
  
 
 print("[INFO] warming up camera...")
-vs = VideoStream(0).start()
+vs = VideoStream(1).start()
 time.sleep(2.0)
  
 # start the app

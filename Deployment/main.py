@@ -1,33 +1,34 @@
-# step 1 press start run
-# step 2 get arduino and size, width and length
-# step 3 run motor for 1 sec and capture 4 frames
-# step 4 run frames through frcnn, crop output then feed to MTL
-# display result in opencv for now. 
-
-'''
-arduino_comms = mango_parameters.arduino("/dev/ttyUSB0", 9600)
-arduino_comms.send_data("height")
-height = arduino_comms.recv_data
-'''
-import tensorflow as tf
+## import the necessary packages
+from __future__ import print_function
+from PIL import Image
+from PIL import ImageTk
+import tkinter as tki
+import threading
+import datetime
+import imutils
 import cv2
+import os
+
+
+from mango_parameters import *
+
+import tensorflow as tf
 import numpy as np
 import collections
-import time
 from mango_parameters import *
+from size_classifier import *
 
 
 import threading
 
-configd = tf.ConfigProto()
-configd.gpu_options.allow_growth=True
 
+import time
 
 
 class Import_Frcnn():
 	def __init__(self, location):
 		self.graph_frcnn = tf.Graph()
-		self.sess = tf.Session(graph=self.graph_frcnn, config=configd)
+		self.sess = tf.Session(graph=self.graph_frcnn)
 		with self.graph_frcnn.as_default():
 			self.od_graph_def = tf.GraphDef()	
 			with tf.gfile.GFile(location, 'rb') as fid:
@@ -52,7 +53,7 @@ class Import_MTL():
 	def __init__(self, location):
 
 		self.graph_mtl = load_graph(location)
-		self.sess = tf.Session(graph = self.graph_mtl, config=configd)
+		self.sess = tf.Session(graph = self.graph_mtl)
 		'''
 		for op in self.graph_mtl.get_operations():
 			print(str(op.name)) 
@@ -64,155 +65,245 @@ class Import_MTL():
 
 
 	def run(self, frame):
-		image_np = self.predict(frame)
-		return self.sess.run([self.y_pred_quality, self.y_pred_ripeness], feed_dict={self.x: image_np})
-
-
-	def predict(self, image):
-		image_rgb = cv2.resize(image, (50,50))
+		image_rgb = cv2.resize(frame, (50,50))
 		image_rgb = np.expand_dims(image_rgb, axis = 0)
-		return image_rgb
+		return self.sess.run([self.y_pred_quality, self.y_pred_ripeness], feed_dict={self.x: image_rgb})
 
 
 def get_box(boxes, scores, image):
 	boxes = np.squeeze(boxes)
-	boxes_array = []
-	scores_array = []
 	height, width = image.shape[:2]
-	for i in range(3):
-		if scores.item(i) > 0.8:
-			ymin, xmin, ymax, xmax = boxes[i]
-			boxes_array.append([xmin * width, xmax * width, ymin * height, ymax * height])
-			scores_array.append(scores.item(i))
-		else: 
-			pass
+	box = None
+	score = None
 
-	return boxes_array, scores_array
+	ymin, xmin, ymax, xmax = boxes[0]
+	box = [xmin * width, xmax * width, ymin * height, ymax * height]
+	score = scores.item(0)
 
+	return box, score
 
-
-
-
+	
 class MyThread(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.stop = threading.Event()
-
-		#predict up to 3 items only
-		self.model_mtl = Import_MTL("frozen_models/MTL_frozen_model.pb")
-		self.model_fcnn = Import_Frcnn('frozen_models/frozen_inference_graph.pb')
+		self.create_models()
 
 	def run(self, frame):
 		# Load the VGG16 network
+
 		return self.predict(frame)
+		
 
 	def predict(self, frame):
-		ripe_score = []
-		quality_score = []
+
 		(boxes, scores, classes, num) = self.model_fcnn.run(frame)
 		box_array, scores_ = get_box(boxes, scores, frame)
+		if scores_:
+			left, right, top, bottom  = box_array
+			crop = frame[int(top):int(bottom), int(left):int(right)]
+			x, y =get_size(crop, 82)
+			weight, size = predict_size([x,y])
 
-		if box_array:
-			for g in range(len(scores)):
-				left, right, top, bottom  = box_array[g]
-				crop = frame[int(top):int(bottom), int(left):int(right)]
-				quality, ripeness = self.model_mtl.run(crop)
-				ripe_score.append(ripeness)
-				quality_score.append(quality)
+			quality, ripeness = self.model_mtl.run(crop)
+			img, quality_, ripeness_ = draw_boxes_scores(box_array, scores_, ripeness, quality, frame)
+			return img, quality_, ripeness_, size
+		else:
+			pass
 
-		return box_array, scores_, ripe_score, quality_score
 
-		
+	def create_models(self):
+		#predict up to 3 items only
+		self.model_mtl = Import_MTL("frozen_models/MTL_frozen_model.pb")
+		self.model_fcnn = Import_Frcnn('frozen_models/frozen_inference_graph.pb')
+		self.model_lr = load_graph('frozen_models/LR_frozen_model.pb')
 
 	def terminate(self):
 		self.stop.set()
 
 
-
 def draw_boxes_scores(box_array, score_array, ripe_array, quality_array, frame):
 	ripeness_dict = {0: 'Green', 1: 'Semi-Ripe', 2: 'Ripe'}
 	quality_dict = {0: 'Good', 1: 'Defect'}
-	for i in range(len(box_array)):
+	cv2.rectangle(frame, (int(box_array[0]), int(box_array[2])), (int(box_array[1]), int(box_array[3])),(0,255,0),3)
+	cv2.putText(frame, "Detection:{0:.2f}".format(score_array), (int(box_array[0]),int(box_array[2]-6)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+	cv2.putText(frame, "Quality:{}".format(quality_dict[int(np.argmax(quality_array, axis=1))]), (int(box_array[0]),int(box_array[2]-17)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+	cv2.putText(frame, "Ripeness:{}".format(ripeness_dict[int(np.argmax(ripe_array, axis=1))]), (int(box_array[0]),int(box_array[2]-28)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+	return frame, quality_dict[int(np.argmax(quality_array, axis=1))], ripeness_dict[int(np.argmax(ripe_array, axis=1))]
+
+
+
+
+
+
+
+class PhotoBoothApp:
+	def __init__(self, vs):
+		# store the video stream object and output path, then initialize
+		# the most recently read frame, thread for reading frames, and
+		# the thread stop event
+		self.vs = vs
+		self.frame = None
+		self.thread = None
+		self.stopEvent = None
+
+		# initialize the root window and image panel
+		self.root = tki.Tk()
+		self.panel = None
+
+
+		self.arduinos = arduino("/dev/ttyUSB0", 9600)
+		self.yo_thread = MyThread()
+
+
+		w = tki.Label(self.root, text="Mango AI")
+		w.pack()
+
+
+		self.r = tki.Label(self.root, text="ripeness:")
+		self.q = tki.Label(self.root, text="quality:")
+		self.s = tki.Label(self.root, text="size:")
+		self.r.pack()
+		self.q.pack()
+		self.s.pack()
+
+
+		# create a button, that when pressed, will take the current
+		# frame and save it to file
+		btn = tki.Button(self.root, text="QUIT",
+			command=self.onClose)
+		btn.pack(side="bottom", fill="both", expand="yes", padx=10,
+			pady=10)
+		start_time = time.time()
+
+		btn = tki.Button(self.root, text="process",
+			command=self.run_process)
+		timey  =(time.time() - start_time)
+
+		btn.pack(side="bottom", fill="both", expand="yes", padx=10,
+			pady=10)
+
+
+
+		self.stopEvent = threading.Event()
+		self.thread = threading.Thread(target=self.videoLoop)
+		self.thread.start()
+
+	def videoLoop(self):
+		# DISCLAIMER:
+		# I'm not a GUI developer, nor do I even pretend to be. This
+		# try/except statement is a pretty ugly hack to get around
+		# a RunTime error that Tkinter throws due to threading
+
+
 		try:
-			cv2.rectangle(frame, (int(box_array[i][0]), int(box_array[i][2])), (int(box_array[i][1]), int(box_array[i][3])),(0,255,0),3)
-			cv2.putText(frame, "Detection:{0:.2f}".format(score_array[i]), (int(box_array[i][0]),int(box_array[i][2]-6)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
-			cv2.putText(frame, "Quality:{}".format(quality_dict[int(np.argmax(quality_array[i], axis=1))]), (int(box_array[i][0]),int(box_array[i][2]-17)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
-			cv2.putText(frame, "Ripeness:{}".format(ripeness_dict[int(np.argmax(ripe_array[i], axis=1))]), (int(box_array[i][0]),int(box_array[i][2]-28)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+			# keep looping over frames until we are instructed to stop
+			while not self.stopEvent.is_set():
+				# grab the frame from the video stream and resize it to
+				# have a maximum width of 300 pixels
+				self.frame = self.vs.read()
+				self.frame = imutils.resize(self.frame, width=300)
+		
+				# OpenCV represents images in BGR order; however PIL
+				# represents images in RGB order, so we need to swap
+				# the channels, then convert to PIL and ImageTk format
+		except RuntimeError:
+			print("[INFO] caught a RuntimeError")
+
+
+	def run_process(self):
+		images  = None
+		images, quality, ripeness, size = self.get_image()
+
+
+		if quality[0] == quality[1]:
+			qus = quality[0]
+		else:
+			qus = "Defect" 
+
+		if ripeness[0] == ripeness[1]:
+			ripss = ripeness[0]
+		else:
+			ripss = "Semi-Ripe"
+
+
+
+
+		if images:
+			if self.panel is None:
+				self.panel = tki.Label(image=images[0])
+
+				self.panel.pack(side="left", padx=10, pady=10)
+				self.panel1 = tki.Label(image=images[1])
+				self.panel1.pack(side="left", padx=10, pady=10)
+
+			else:
+				self.panel.configure(image=images[0])
+				self.panel.image = images[0]
+				self.panel1.configure(image=images[1])
+				self.panel1.image = images[1]		
+				self.r.configure(text = "Ripeness: {}".format(ripss))
+				self.q.configure(text= "Quality: {}".format(qus))
+				self.s.configure(text=size[0])
+
+
+	def get_image(self):
+		images = []
+		quality_ = []
+		ripeness_ = []
+		sizes_ = []
+		#grab 2 images, then process them
+		results = self.process_image()
+		images.append(results[0])
+		quality_.append(results[1])
+		ripeness_.append(results[2])
+		sizes_.append(results[3])
+		self.arduinos.send_data(1)
+		time.sleep(0.5)
+		results = self.process_image()
+		images.append(results[0])
+		quality_.append(results[1])
+		ripeness_.append(results[2])
+		sizes_.append(results[3])
+
+	
+		return images, quality_, ripeness_, sizes_
+
+	def process_image(self):
+		image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+		try:
+			image, quality, ripeness, size = self.yo_thread.run(image)
+			image = Image.fromarray(image)
+			image = ImageTk.PhotoImage(image)
+			return image, quality, ripeness, size
 		except:
-			pass
+			quality = "None"
+			ripeness = "None"
+			size = "None"
+			image = Image.fromarray(image)
+			image = ImageTk.PhotoImage(image)
+			return image, quality, ripeness, size
+			
 
 
-def load_graph(frozen_graph_filename):
-    # We load the protobuf file from the disk and parse it to retrieve the 
-    # unserialized graph_def
-    with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-
-    # Then, we import the graph_def into a new Graph and returns it 
-    with tf.Graph().as_default() as graph:
-        # The name var will prefix every op/nodes in your graph
-        # Since we load everything in a new graph, this is not needed
-        tf.import_graph_def(graph_def, name="prefix")
-    return graph
-
-def normalize_size(x):
-    #Values obtained from train.py output
-    mean = np.asarray([[76.06636364, 119.57220779]])
-    std = np.asarray([[5.95719927, 8.19216614]])
-    x_normalized = (x - mean) / std
-    return x_normalized
-
-def convert_sizes(size):
-	size = int(size)
-	if size >= 400:
-		return "Large"
-	elif size <= 399 and size >= 200:
-		return "medium"
-	elif size < 199:
-		return "small"
+	def onClose(self):
+		# set the stop event, cleanup the camera, and allow the rest of
+		# the quit process to continue
+		print("[INFO] closing...")
+		self.stopEvent.set()
+		self.vs.stop()
+		self.root.quit()
 
 
 
+from imutils.video import VideoStream
+import time
+ 
 
-def main():
-
-	cap = cv2.VideoCapture(0)
-	cap.set(3,1080)
-	cap.set(4,720)
-	if (cap.isOpened()):
-		print("Camera OK")
-	else:
-		cap.open()
-
-	yo_thread = MyThread()
-
-	while(True):
-
-		ret, frame = cap.read()
-		frame_ = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-		box, score, ripe, quality = yo_thread.run(frame_)
-
-
-
-		draw_boxes_scores(box, score, ripe, quality, frame)
-
-		cv2.imshow("Classification", frame)
-		cv2.namedWindow('Classification',cv2.WINDOW_NORMAL)
-		if (cv2.waitKey(1) & 0xFF == ord('q')):
-			break;
-
-	cap.release()
-	frame = None
-	cv2.destroyAllWindows()
-	yo_thread.terminate()
-	sys.exit()
-
-
-
-if __name__ == "__main__":
-	main()
-
-
-
-
+print("[INFO] warming up camera...")
+vs = VideoStream(1).start()
+time.sleep(2.0)
+ 
+# start the app
+pba = PhotoBoothApp(vs)
+pba.root.mainloop()
