@@ -126,9 +126,9 @@ def draw_boxes_scores(box_array, score_array, ripe_array, quality_array, frame):
 	ripeness_dict = {0: 'Green', 1: 'Semi-Ripe', 2: 'Ripe'}
 	quality_dict = {0: 'Good', 1: 'Defect'}
 	cv2.rectangle(frame, (int(box_array[0]), int(box_array[2])), (int(box_array[1]), int(box_array[3])),(0,255,0),3)
-	cv2.putText(frame, "Detection:{0:.2f}".format(score_array), (int(box_array[0]),int(box_array[2]-6)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
-	cv2.putText(frame, "Quality:{}".format(quality_dict[int(np.argmax(quality_array, axis=1))]), (int(box_array[0]),int(box_array[2]-17)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
-	cv2.putText(frame, "Ripeness:{}".format(ripeness_dict[int(np.argmax(ripe_array, axis=1))]), (int(box_array[0]),int(box_array[2]-28)), cv2.FONT_HERSHEY_TRIPLEX, 0.4, (0,255,0))
+	cv2.putText(frame, "Detection:  {0:.2f}".format(score_array), (10, 16), cv2.FONT_HERSHEY_TRIPLEX, 0.6, (0,0,0))
+	cv2.putText(frame, "Quality:  {}".format(quality_dict[int(np.argmax(quality_array, axis=1))]), (10, 32), cv2.FONT_HERSHEY_TRIPLEX, 0.6, (0,0,0))
+	cv2.putText(frame, "Ripeness:  {}".format(ripeness_dict[int(np.argmax(ripe_array, axis=1))]), (10, 48), cv2.FONT_HERSHEY_TRIPLEX, 0.6, (0,0,0))
 	return frame, quality_dict[int(np.argmax(quality_array, axis=1))], ripeness_dict[int(np.argmax(ripe_array, axis=1))]
 
 
@@ -301,7 +301,7 @@ import time
  
 
 print("[INFO] warming up camera...")
-vs = VideoStream(1).start()
+vs = VideoStream(0).start()
 time.sleep(2.0)
  
 # start the app
