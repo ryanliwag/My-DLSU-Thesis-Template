@@ -2,12 +2,12 @@ def Is_Unique(string):
     """Implement an algorithm to determine if a string has all unique characters. What if you
     cannot use additional data structures"""
     string_arr = list(string)
-    
+
     for i in range(len(string_arr)):
         tmp = string_arr.pop()
         if tmp in string_arr:
             return False
-    
+
     return True
 
 
@@ -16,7 +16,7 @@ def Check_Permutation(str1, str2):
     other."""
 
     str1_arr, str2_arr = list(str1), list(str2)
-    
+
     if len(str1_arr) == len(str2_arr):
         for i in range(len(str1_arr)):
             if str1_arr[i] in str2_arr:
@@ -35,13 +35,13 @@ def URLify(string):
     for i in range(len(string) - 1):
         if string[i] == " ":
             if string[i + 1] != " ":
-                tmp_string.append("%")        
+                tmp_string.append("%")
         else:
             tmp_string.append(string[i])
     tmp_string = "".join(tmp_string)
-    
+
     return tmp_string
-    
+
 
 def Palindrome_Permutation(str1):
     """Given a string, write a function to check if it is a permutation of a palin-
@@ -50,12 +50,12 @@ def Palindrome_Permutation(str1):
     str1=str1.replace(" ","")
     item_list = list(str1.lower())
     uniq_items = set(item_list)
-    
+
     counter = 0
     for i in uniq_items:
         if item_list.count(i) % 2 != 0:
             counter += 1
-    
+
     if counter > 1:
         return False
     else:
@@ -75,12 +75,12 @@ def is_one_away(first: str, other: str) -> bool:
     try:
         skip = skip_difference[len(first) - len(other)]
     except KeyError:
-        return False  
+        return False
 
     for i, (l1, l2) in enumerate(zip(first, other)):
         print(i)
         if l1 != l2:
-            i -= 1  
+            i -= 1
             break
 
     remain_first, remain_other = skip(i + 1)
@@ -90,7 +90,7 @@ def compress(string):
     res = ""
     count = 1
     res += string[0]
-    
+
     for i in range(len(string)-1):
         if(string[i] == string[i+1]):
             count+=1
